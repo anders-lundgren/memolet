@@ -84,7 +84,7 @@ function getColor(name) {
   return '#5a7a5a'
 }
 
-export default function DeckBrowser({ groups, onStart }) {
+export default function DeckBrowser({ groups, onStart, progress = {} }) {
   const [search, setSearch] = useState('')
   const [activeGroup, setActiveGroup] = useState(null) // for mode picker
   const [mode, setMode] = useState('fr→sv')
@@ -167,6 +167,8 @@ export default function DeckBrowser({ groups, onStart }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
           {filtered.map(group => {
             const color = getColor(group.name)
+            const p = progress[group.name]
+            const allCorrect = p && p.known >= p.total
             return (
               <button
                 key={group.name}
@@ -174,7 +176,7 @@ export default function DeckBrowser({ groups, onStart }) {
                 className="rounded-2xl p-3.5 text-left transition-all active:scale-95"
                 style={{
                   background: color + '12',
-                  border: `1.5px solid ${color}30`,
+                  border: `1.5px solid ${allCorrect ? 'var(--sage)' : color + '30'}`,
                 }}
               >
                 <div
@@ -186,6 +188,23 @@ export default function DeckBrowser({ groups, onStart }) {
                 <p className="font-display text-sm leading-snug" style={{ color: 'var(--ink)' }}>
                   {group.name}
                 </p>
+                {/* Progress indicator */}
+                <div className="mt-2.5">
+                  <div className="h-0.5 rounded-full overflow-hidden" style={{ background: color + '25' }}>
+                    <div
+                      className="h-full rounded-full progress-fill"
+                      style={{
+                        width: p ? `${Math.round((p.known / p.total) * 100)}%` : '0%',
+                        background: allCorrect ? 'var(--sage)' : color,
+                      }}
+                    />
+                  </div>
+                  {p && (
+                    <p className="text-xs mt-1" style={{ color: allCorrect ? 'var(--sage)' : '#9a8f7f' }}>
+                      {allCorrect ? '✓ Alla rätt' : `${p.known} / ${p.total}`}
+                    </p>
+                  )}
+                </div>
               </button>
             )
           })}

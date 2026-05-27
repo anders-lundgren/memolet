@@ -9,7 +9,7 @@ function shuffle(arr) {
   return a
 }
 
-export default function StudyView({ cards, deckName, mode, onExit }) {
+export default function StudyView({ cards, deckName, mode, onExit, onComplete }) {
   const [deck, setDeck] = useState(() => shuffle(cards))
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
@@ -49,11 +49,15 @@ export default function StudyView({ cards, deckName, mode, onExit }) {
     if (wasKnown) setKnown(k => [...k, index])
     else setUnknown(u => [...u, index])
 
+    // Compute final known count now (before state update re-renders)
+    const finalKnown = known.length + (wasKnown ? 1 : 0)
+
     setTimeout(() => {
       setSwipeAnim(null)
       setFlipped(false)
       if (index + 1 >= deck.length) {
         setDone(true)
+        onComplete?.(finalKnown)
       } else {
         setIndex(i => i + 1)
       }

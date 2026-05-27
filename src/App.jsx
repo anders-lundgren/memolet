@@ -18,9 +18,17 @@ function groupDecks(decks) {
 
 const deckGroups = groupDecks(rawDecks)
 
+const STORAGE_KEY = 'memolet_progress'
+
+function loadProgress() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? {} }
+  catch { return {} }
+}
+
 export default function App() {
   const [studyGroup, setStudyGroup] = useState(null)
   const [studyMode, setStudyMode] = useState('fr→sv') // 'fr→sv' | 'sv→fr' | 'mixed'
+  const [progress, setProgress] = useState(loadProgress)
 
   const startStudy = useCallback((group, mode) => {
     setStudyGroup(group)
@@ -32,15 +40,29 @@ export default function App() {
   if (studyGroup) {
     // Flatten all cards from all decks in this group
     const allCards = studyGroup.decks.flatMap(d => d.cards)
+    const groupName = studyGroup.name
+    const groupTotal = studyGroup.totalCards
+
+    function handleComplete(knownCount) {
+      setProgress(prev => {
+        // Keep the best (highest) known count ever achieved for this group
+        const best = Math.max(prev[groupName]?.known ?? 0, knownCount)
+        const next = { ...prev, [groupName]: { known: best, total: groupTotal } }
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {}
+        return next
+      })
+    }
+
     return (
       <StudyView
         cards={allCards}
-        deckName={studyGroup.name}
+        deckName={groupName}
         mode={studyMode}
         onExit={exitStudy}
+        onComplete={handleComplete}
       />
     )
   }
 
-  return <DeckBrowser groups={deckGroups} onStart={startStudy} />
+  return <DeckBrowser groups={deckGroups} onStart={startStudy} progress={progress} />
 }
