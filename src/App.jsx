@@ -3,17 +3,49 @@ import rawDecks from './data/cards.json'
 import DeckBrowser from './components/DeckBrowser.jsx'
 import StudyView from './components/StudyView.jsx'
 
-// Group sheets by prefix (e.g. "Vanliga adverb 1", "Vanliga adverb 2" → one group)
+// Maximum cards per displayed group (≈ one 5-minute session)
+const MAX_GROUP_CARDS = 20
+
+// Group source decks by their base name, then chunk so no group exceeds MAX_GROUP_CARDS.
+// With source decks already batched at ~20 cards each, every source deck becomes its own
+// displayed group. Single-deck categories keep their original name; multi-deck categories
+// are numbered 1, 2, 3… matching the source batch numbers.
 function groupDecks(decks) {
-  const groups = {}
+  // Collect source decks by base name, preserving JSON order
+  const byBase = {}
   decks.forEach(deck => {
-    // strip trailing number
     const base = deck.name.replace(/\s+\d+$/, '').trim()
-    if (!groups[base]) groups[base] = { name: base, decks: [], totalCards: 0 }
-    groups[base].decks.push(deck)
-    groups[base].totalCards += deck.cards.length
+    if (!byBase[base]) byBase[base] = []
+    byBase[base].push(deck)
   })
-  return Object.values(groups)
+
+  const groups = []
+  for (const [base, sourceDecks] of Object.entries(byBase)) {
+    // Build chunks: start a new chunk whenever adding the next deck would exceed the cap
+    const chunks = []
+    let current = [], currentTotal = 0
+    for (const deck of sourceDecks) {
+      if (current.length > 0 && currentTotal + deck.cards.length > MAX_GROUP_CARDS) {
+        chunks.push(current)
+        current = []
+        currentTotal = 0
+      }
+      current.push(deck)
+      currentTotal += deck.cards.length
+    }
+    if (current.length > 0) chunks.push(current)
+
+    // Name each chunk: no suffix when there's only one, numbered otherwise
+    chunks.forEach((chunk, i) => {
+      groups.push({
+        name: chunks.length === 1 ? base : `${base} ${i + 1}`,
+        decks: chunk,
+        totalCards: chunk.reduce((s, d) => s + d.cards.length, 0),
+      })
+    })
+  }
+
+  return groups
 }
 
 const deckGroups = groupDecks(rawDecks)
