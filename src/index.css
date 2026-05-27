@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --cream: #f5f0e8;
+    --ink: #1a1612;
+    --rouge: #c0392b;
+    --gold: #c9a84c;
+    --sage: #5a7a5a;
+    --mist: #e8e0d0;
+    --paper: #faf7f2;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background-color: var(--cream);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+/* Card flip */
+.card-scene {
+  perspective: 1000px;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.card-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+}
+
+/* Swipe animations */
+@keyframes swipe-right {
+  to { transform: translateX(150%) rotate(20deg); opacity: 0; }
+}
+@keyframes swipe-left {
+  to { transform: translateX(-150%) rotate(-20deg); opacity: 0; }
+}
+@keyframes slide-in {
+  from { transform: translateY(20px) scale(0.97); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes pop-in {
+  0% { transform: scale(0.92); opacity: 0; }
+  60% { transform: scale(1.03); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes fade-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-swipe-right { animation: swipe-right 0.4s ease-in forwards; }
+.animate-swipe-left  { animation: swipe-left  0.4s ease-in forwards; }
+.animate-slide-in    { animation: slide-in    0.35s ease-out; }
+.animate-pop-in      { animation: pop-in      0.35s ease-out; }
+.animate-fade-up     { animation: fade-up     0.4s ease-out; }
+
+/* Progress bar */
+.progress-fill {
+  transition: width 0.4s ease;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--mist); border-radius: 3px; }
+
+/* Touch hint pulse */
+@keyframes gentle-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+.pulse { animation: gentle-pulse 2s ease-in-out infinite; }
