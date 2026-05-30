@@ -17,6 +17,18 @@ function isMatch(fr, typed) {
   return parseAnswers(fr).some(a => a.toLowerCase() === typed.trim().toLowerCase())
 }
 
+// Returns a hint string when the French answer has multiple words, null otherwise
+function getHint(fr) {
+  const multi = parseAnswers(fr).find(a => a.split(/\s+/).length > 1)
+  if (!multi) return null
+  const first = multi.split(/\s+/)[0].toLowerCase()
+  if (['le', 'la', 'les'].includes(first) || /^l['']/.test(first)) return 'Inkludera bestämd artikel'
+  if (['un', 'une', 'des'].includes(first)) return 'Inkludera obestämd artikel'
+  if (['du', 'de'].includes(first)) return 'Inkludera partikel'
+  if (['je', 'tu', 'il', 'elle', 'on', 'nous', 'vous', 'ils', 'elles'].includes(first)) return 'Inkludera pronomen'
+  return `Svaret har ${multi.split(/\s+/).length} ord`
+}
+
 const DIACRITICS = ['é', 'è', 'ê', 'ë', 'à', 'â', 'ç', 'î', 'ï', 'ô', 'ù', 'û', 'œ']
 const RERUN_TARGET = 3
 
@@ -40,6 +52,7 @@ export default function TypingView({ cards, deckName, onExit, onComplete }) {
 
   const isRerun = phase === 'rerun'
   const card = isRerun ? rerunBatch[rerunBatchIdx] : mainDeck[mainIndex]
+  const hint = card ? getHint(card.fr) : null
   const progressFrac = isRerun
     ? rerunBatchIdx / rerunBatch.length
     : mainIndex / mainDeck.length
@@ -81,6 +94,13 @@ export default function TypingView({ cards, deckName, onExit, onComplete }) {
         return next
       })
     }
+  }
+
+  function handleDontKnow() {
+    if (submitted) return
+    setSubmitted(true)
+    if (!isRerun) setFailedCards(f => [...f, card])
+    // rerun: successCounts unchanged — same as a wrong answer
   }
 
   function handleAdvance() {
@@ -258,6 +278,13 @@ export default function TypingView({ cards, deckName, onExit, onComplete }) {
           )}
         </div>
 
+        {/* Multi-word hint */}
+        {hint && !submitted && (
+          <p className="text-xs" style={{ color: '#9a8f7f' }}>
+            ⓘ {hint}
+          </p>
+        )}
+
         {/* Input area */}
         <div className="w-full flex flex-col gap-3" style={{ maxWidth: 420 }}>
           <input
@@ -315,17 +342,24 @@ export default function TypingView({ cards, deckName, onExit, onComplete }) {
             </div>
           )}
 
-          {/* Action button */}
+          {/* Action buttons */}
           {!submitted ? (
-            <button onClick={handleSubmit}
-              disabled={!input.trim()}
-              className="w-full rounded-xl py-3.5 font-medium transition-all active:scale-95"
-              style={{
-                background: input.trim() ? 'var(--ink)' : 'var(--mist)',
-                color: input.trim() ? 'var(--cream)' : '#9a8f7f',
-              }}>
-              Kontrollera
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handleSubmit}
+                disabled={!input.trim()}
+                className="flex-1 rounded-xl py-3.5 font-medium transition-all active:scale-95"
+                style={{
+                  background: input.trim() ? 'var(--ink)' : 'var(--mist)',
+                  color: input.trim() ? 'var(--cream)' : '#9a8f7f',
+                }}>
+                Kontrollera
+              </button>
+              <button onClick={handleDontKnow}
+                className="rounded-xl px-4 py-3.5 font-medium transition-all active:scale-95"
+                style={{ background: 'var(--mist)', color: '#9a8f7f' }}>
+                Vet inte
+              </button>
+            </div>
           ) : (
             <button onClick={handleAdvance}
               className="w-full rounded-xl py-3.5 font-medium transition-all active:scale-95 animate-fade-up"
