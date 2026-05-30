@@ -100,6 +100,21 @@ export default function DeckBrowser({ groups, onStart, progress = {}, typingProg
     )
   }, [search, groups])
 
+  // Sort: studied decks first (most recent on top), unseen decks keep original order at the end
+  const sortedFiltered = useMemo(() => {
+    const getTime = g => Math.max(
+      progress[g.name]?.lastStudied ?? 0,
+      typingProgress[g.name]?.lastStudied ?? 0,
+    )
+    return [...filtered].sort((a, b) => {
+      const at = getTime(a), bt = getTime(b)
+      if (at === 0 && bt === 0) return 0  // both unseen: preserve original order
+      if (at === 0) return 1              // a unseen: sink to end
+      if (bt === 0) return -1             // b unseen: sink to end
+      return bt - at                      // both studied: newer first
+    })
+  }, [filtered, progress, typingProgress])
+
   const totalCards = groups.reduce((s, g) => s + g.totalCards, 0)
 
   const unsolvedGroups = useMemo(() =>
@@ -185,13 +200,13 @@ export default function DeckBrowser({ groups, onStart, progress = {}, typingProg
 
       {/* Deck grid */}
       <main className="px-3 pb-24 pt-2">
-        {filtered.length === 0 && (
+        {sortedFiltered.length === 0 && (
           <p className="text-center py-12" style={{ color: '#9a8f7f' }}>
             Inga lekar hittades.
           </p>
         )}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-          {filtered.map(group => {
+          {sortedFiltered.map(group => {
             const color = getColor(group.name)
             const p = progress[group.name]
             const allCorrect = p && p.known >= p.total

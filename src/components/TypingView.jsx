@@ -48,7 +48,16 @@ export default function TypingView({ cards, deckName, onExit, onComplete }) {
   const [phase, setPhase] = useState('main') // 'main' | 'rerun' | 'done'
   const [input, setInput] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [draining, setDraining] = useState(false)
   const inputRef = useRef(null)
+
+  // Auto-return to deck view after results; cancelled if the user restarts
+  useEffect(() => {
+    if (phase !== 'done') { setDraining(false); return }
+    const raf = requestAnimationFrame(() => setDraining(true))
+    const timer = setTimeout(onExit, 4000)
+    return () => { cancelAnimationFrame(raf); clearTimeout(timer) }
+  }, [phase, onExit])
 
   const isRerun = phase === 'rerun'
   const card = isRerun ? rerunBatch[rerunBatchIdx] : mainDeck[mainIndex]
@@ -203,6 +212,20 @@ export default function TypingView({ cards, deckName, onExit, onComplete }) {
               style={{ background: 'var(--mist)', color: 'var(--ink)' }}>
               ← Tillbaka till lekar
             </button>
+          </div>
+
+          {/* Auto-return countdown bar */}
+          <div className="mt-5">
+            <div className="h-0.5 rounded-full overflow-hidden" style={{ background: 'var(--mist)' }}>
+              <div style={{
+                height: '100%', background: 'var(--sage)', transformOrigin: 'left',
+                transform: draining ? 'scaleX(0)' : 'scaleX(1)',
+                transition: draining ? 'transform 4s linear' : 'none',
+              }} />
+            </div>
+            <p className="text-xs mt-1.5 text-center" style={{ color: '#9a8f7f' }}>
+              Återvänder automatiskt…
+            </p>
           </div>
         </div>
       </div>

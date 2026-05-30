@@ -18,7 +18,16 @@ export default function StudyView({ cards, deckName, mode, onExit, onComplete })
   const [unknown, setUnknown] = useState([]) // indices of unsure cards
   const [done, setDone] = useState(false)
   const [showHint, setShowHint] = useState(true)
+  const [draining, setDraining] = useState(false)
   const touchStart = useRef(null)
+
+  // Auto-return to deck view after results; cancelled if the user starts a retry
+  useEffect(() => {
+    if (!done) { setDraining(false); return }
+    const raf = requestAnimationFrame(() => setDraining(true))
+    const timer = setTimeout(onExit, 4000)
+    return () => { cancelAnimationFrame(raf); clearTimeout(timer) }
+  }, [done, onExit])
 
   const card = deck[index]
   const progress = index / deck.length
@@ -162,6 +171,20 @@ export default function StudyView({ cards, deckName, mode, onExit, onComplete })
             >
               ← Tillbaka till lekar
             </button>
+          </div>
+
+          {/* Auto-return countdown bar */}
+          <div className="mt-5">
+            <div className="h-0.5 rounded-full overflow-hidden" style={{ background: 'var(--mist)' }}>
+              <div style={{
+                height: '100%', background: 'var(--sage)', transformOrigin: 'left',
+                transform: draining ? 'scaleX(0)' : 'scaleX(1)',
+                transition: draining ? 'transform 4s linear' : 'none',
+              }} />
+            </div>
+            <p className="text-xs mt-1.5 text-center" style={{ color: '#9a8f7f' }}>
+              Återvänder automatiskt…
+            </p>
           </div>
         </div>
       </div>

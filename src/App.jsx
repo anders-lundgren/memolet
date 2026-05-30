@@ -78,17 +78,18 @@ export default function App() {
     const groupTotal = studyGroup.totalCards
 
     function handleComplete(count) {
+      const lastStudied = Date.now()
       if (studyMode === 'type') {
         setTypingProgress(prev => {
           const best = Math.max(prev[groupName]?.known ?? 0, count)
-          const next = { ...prev, [groupName]: { known: best, total: groupTotal } }
+          const next = { ...prev, [groupName]: { known: best, total: groupTotal, lastStudied } }
           try { localStorage.setItem(TYPING_KEY, JSON.stringify(next)) } catch {}
           return next
         })
       } else {
         setProgress(prev => {
           const best = Math.max(prev[groupName]?.known ?? 0, count)
-          const next = { ...prev, [groupName]: { known: best, total: groupTotal } }
+          const next = { ...prev, [groupName]: { known: best, total: groupTotal, lastStudied } }
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {}
           return next
         })
