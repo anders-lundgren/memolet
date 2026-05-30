@@ -84,7 +84,7 @@ function getColor(name) {
   return '#5a7a5a'
 }
 
-export default function DeckBrowser({ groups, onStart, progress = {} }) {
+export default function DeckBrowser({ groups, onStart, progress = {}, typingProgress = {} }) {
   const [search, setSearch] = useState('')
   const [activeGroup, setActiveGroup] = useState(null) // for mode picker
   const [mode, setMode] = useState('fr→sv')
@@ -101,6 +101,20 @@ export default function DeckBrowser({ groups, onStart, progress = {} }) {
   }, [search, groups])
 
   const totalCards = groups.reduce((s, g) => s + g.totalCards, 0)
+
+  const unsolvedGroups = useMemo(() =>
+    groups.filter(g => {
+      const p = progress[g.name]
+      return !p || p.known < p.total
+    }),
+    [groups, progress]
+  )
+
+  function handleRandom() {
+    if (unsolvedGroups.length === 0) return
+    const pick = unsolvedGroups[Math.floor(Math.random() * unsolvedGroups.length)]
+    setActiveGroup(pick)
+  }
 
   function handleDeckClick(group) {
     setActiveGroup(group)
@@ -126,6 +140,18 @@ export default function DeckBrowser({ groups, onStart, progress = {} }) {
             {groups.length} lekar · {totalCards} kort
           </p>
         </div>
+        <button
+          onClick={handleRandom}
+          disabled={unsolvedGroups.length === 0}
+          className="rounded-full px-3.5 py-1.5 text-sm font-medium transition-all active:scale-95 shrink-0"
+          style={{
+            background: unsolvedGroups.length > 0 ? 'var(--ink)' : 'var(--mist)',
+            color: unsolvedGroups.length > 0 ? 'var(--cream)' : '#9a8f7f',
+          }}
+          title={unsolvedGroups.length === 0 ? 'Alla lekar är lösta!' : `${unsolvedGroups.length} lekar kvar`}
+        >
+          Slumpa lek
+        </button>
         <div className="relative">
           <input
             type="search"
@@ -169,6 +195,8 @@ export default function DeckBrowser({ groups, onStart, progress = {} }) {
             const color = getColor(group.name)
             const p = progress[group.name]
             const allCorrect = p && p.known >= p.total
+            const tp = typingProgress[group.name]
+            const allTyped = tp && tp.known >= tp.total
             return (
               <button
                 key={group.name}
@@ -188,7 +216,7 @@ export default function DeckBrowser({ groups, onStart, progress = {} }) {
                 <p className="font-display text-sm leading-snug" style={{ color: 'var(--ink)' }}>
                   {group.name}
                 </p>
-                {/* Progress indicator */}
+                {/* Flashcard progress */}
                 <div className="mt-2.5">
                   <div className="h-0.5 rounded-full overflow-hidden" style={{ background: color + '25' }}>
                     <div
@@ -205,6 +233,25 @@ export default function DeckBrowser({ groups, onStart, progress = {} }) {
                     </p>
                   )}
                 </div>
+
+                {/* Typing progress */}
+                {tp && (
+                  <div className="mt-1.5">
+                    <div className="h-0.5 rounded-full overflow-hidden" style={{ background: color + '25' }}>
+                      <div
+                        className="h-full rounded-full progress-fill"
+                        style={{
+                          width: `${Math.round((tp.known / tp.total) * 100)}%`,
+                          background: allTyped ? 'var(--sage)' : color,
+                          opacity: 0.55,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: allTyped ? 'var(--sage)' : '#9a8f7f', opacity: 0.8 }}>
+                      {allTyped ? '✎ Alla rätt' : `✎ ${tp.known} / ${tp.total}`}
+                    </p>
+                  </div>
+                )}
               </button>
             )
           })}
@@ -234,6 +281,7 @@ export default function DeckBrowser({ groups, onStart, progress = {} }) {
                 { val: 'fr→sv', label: 'Franska → Svenska', desc: 'Visa franska, gissa svenska' },
                 { val: 'sv→fr', label: 'Svenska → Franska', desc: 'Visa svenska, gissa franska' },
                 { val: 'mixed', label: 'Blandat', desc: 'Slumpmässig riktning' },
+                { val: 'type', label: 'Skriv franska', desc: 'Visa svenska, skriv rätt franska' },
               ].map(opt => (
                 <button
                   key={opt.val}

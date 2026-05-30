@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import rawDecks from './data/cards.json'
 import DeckBrowser from './components/DeckBrowser.jsx'
 import StudyView from './components/StudyView.jsx'
+import TypingView from './components/TypingView.jsx'
 
 // Maximum cards per displayed group (≈ one 5-minute session)
 const MAX_GROUP_CARDS = 20
@@ -51,16 +52,18 @@ function groupDecks(decks) {
 const deckGroups = groupDecks(rawDecks)
 
 const STORAGE_KEY = 'memolet_progress'
+const TYPING_KEY = 'memolet_progress_type'
 
-function loadProgress() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? {} }
+function loadProgress(key) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? {} }
   catch { return {} }
 }
 
 export default function App() {
   const [studyGroup, setStudyGroup] = useState(null)
-  const [studyMode, setStudyMode] = useState('fr→sv') // 'fr→sv' | 'sv→fr' | 'mixed'
-  const [progress, setProgress] = useState(loadProgress)
+  const [studyMode, setStudyMode] = useState('fr→sv') // 'fr→sv' | 'sv→fr' | 'mixed' | 'type'
+  const [progress, setProgress] = useState(() => loadProgress(STORAGE_KEY))
+  const [typingProgress, setTypingProgress] = useState(() => loadProgress(TYPING_KEY))
 
   const startStudy = useCallback((group, mode) => {
     setStudyGroup(group)
@@ -70,19 +73,37 @@ export default function App() {
   const exitStudy = useCallback(() => setStudyGroup(null), [])
 
   if (studyGroup) {
-    // Flatten all cards from all decks in this group
     const allCards = studyGroup.decks.flatMap(d => d.cards)
     const groupName = studyGroup.name
     const groupTotal = studyGroup.totalCards
 
-    function handleComplete(knownCount) {
-      setProgress(prev => {
-        // Keep the best (highest) known count ever achieved for this group
-        const best = Math.max(prev[groupName]?.known ?? 0, knownCount)
-        const next = { ...prev, [groupName]: { known: best, total: groupTotal } }
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {}
-        return next
-      })
+    function handleComplete(count) {
+      if (studyMode === 'type') {
+        setTypingProgress(prev => {
+          const best = Math.max(prev[groupName]?.known ?? 0, count)
+          const next = { ...prev, [groupName]: { known: best, total: groupTotal } }
+          try { localStorage.setItem(TYPING_KEY, JSON.stringify(next)) } catch {}
+          return next
+        })
+      } else {
+        setProgress(prev => {
+          const best = Math.max(prev[groupName]?.known ?? 0, count)
+          const next = { ...prev, [groupName]: { known: best, total: groupTotal } }
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {}
+          return next
+        })
+      }
+    }
+
+    if (studyMode === 'type') {
+      return (
+        <TypingView
+          cards={allCards}
+          deckName={groupName}
+          onExit={exitStudy}
+          onComplete={handleComplete}
+        />
+      )
     }
 
     return (
@@ -96,5 +117,12 @@ export default function App() {
     )
   }
 
-  return <DeckBrowser groups={deckGroups} onStart={startStudy} progress={progress} />
+  return (
+    <DeckBrowser
+      groups={deckGroups}
+      onStart={startStudy}
+      progress={progress}
+      typingProgress={typingProgress}
+    />
+  )
 }
